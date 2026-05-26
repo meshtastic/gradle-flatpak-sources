@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Test (Gradle ${{ matrix.gradle }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        gradle: ['9.5.1']
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: ${{ matrix.gradle }}
+
+      - name: Build & Test
+        run: ./gradlew :plugin:build :plugin:functionalTest --stacktrace
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-gradle-${{ matrix.gradle }}
+          path: plugin/build/reports/

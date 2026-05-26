@@ -1,0 +1,32 @@
+name: Snapshot
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  snapshot:
+    name: Publish SNAPSHOT to Maven Central
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Build & Test
+        run: ./gradlew :plugin:build :plugin:functionalTest --stacktrace
+
+      - name: Publish SNAPSHOT
+        env:
+          CENTRAL_PORTAL_USERNAME: ${{ secrets.CENTRAL_PORTAL_USERNAME }}
+          CENTRAL_PORTAL_PASSWORD: ${{ secrets.CENTRAL_PORTAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.SIGNING_PASSWORD }}
+        run: ./gradlew :plugin:publishAllPublicationsToCentralSnapshots
