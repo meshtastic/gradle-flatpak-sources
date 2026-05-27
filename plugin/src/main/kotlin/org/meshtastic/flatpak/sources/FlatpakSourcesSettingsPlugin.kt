@@ -53,6 +53,9 @@ import java.util.concurrent.ConcurrentHashMap
 class FlatpakSourcesSettingsPlugin : Plugin<Settings> {
 
     override fun apply(settings: Settings) {
+        // No-op in offline mode — there's nothing to capture and the project plugin isn't needed.
+        if (settings.gradle.startParameter.isOffline) return
+
         val capturedUrls: MutableSet<String> = ConcurrentHashMap.newKeySet()
         settings.gradle.extensions.add(FlatpakSourcesPlugin.CAPTURED_URLS_KEY, capturedUrls)
 

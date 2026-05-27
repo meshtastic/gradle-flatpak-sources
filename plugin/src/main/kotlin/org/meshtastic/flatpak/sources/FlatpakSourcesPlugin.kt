@@ -47,6 +47,9 @@ class FlatpakSourcesPlugin : Plugin<Project> {
     override fun apply(target: Project) {
         check(target == target.rootProject) { "org.meshtastic.flatpak.sources must be applied to the root project" }
 
+        // No-op in offline mode — nothing to capture.
+        if (target.gradle.startParameter.isOffline) return
+
         val extension = target.extensions.create("flatpakSources", FlatpakSourcesExtension::class.java)
         extension.outputFile.convention(target.layout.buildDirectory.file("flatpak-sources.json"))
 
