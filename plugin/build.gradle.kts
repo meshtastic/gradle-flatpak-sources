@@ -24,7 +24,7 @@ plugins {
 }
 
 group = "org.meshtastic.flatpak"
-version = "0.1.1"
+if (project.hasProperty("snapshotBuild")) version = "$version-SNAPSHOT"
 
 java {
     toolchain {

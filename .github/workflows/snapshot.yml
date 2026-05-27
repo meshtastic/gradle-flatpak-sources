@@ -29,4 +29,4 @@ jobs:
           CENTRAL_PORTAL_PASSWORD: ${{ secrets.CENTRAL_PORTAL_PASSWORD }}
           ORG_GRADLE_PROJECT_signingKey: ${{ secrets.SIGNING_KEY }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.SIGNING_PASSWORD }}
-        run: ./gradlew :plugin:publishAllPublicationsToCentralSnapshots
+        run: ./gradlew :plugin:publishAllPublicationsToCentralSnapshots -PsnapshotBuild
