@@ -11,6 +11,7 @@ package org.meshtastic.flatpak.sources
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
 import java.io.File
+import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -67,7 +68,7 @@ class FlatpakSourcesPluginFunctionalTest {
 
     @Test
     fun `multi-module project works`() {
-        val projectDir = createTempDir("flatpak-multimodule")
+        val projectDir = Files.createTempDirectory("flatpak-multimodule").toFile()
         File(projectDir, "settings.gradle.kts").writeText(
             """
             rootProject.name = "multi-module-test"
@@ -105,7 +106,7 @@ class FlatpakSourcesPluginFunctionalTest {
 
     @Test
     fun `settings plugin applies project plugin and task exists`() {
-        val projectDir = createTempDir("flatpak-settings")
+        val projectDir = Files.createTempDirectory("flatpak-settings").toFile()
         File(projectDir, "settings.gradle.kts").writeText(
             """
             plugins {
@@ -128,7 +129,7 @@ class FlatpakSourcesPluginFunctionalTest {
 
     @Test
     fun `settings plugin captures URLs without init script warning`() {
-        val projectDir = createTempDir("flatpak-settings-capture")
+        val projectDir = Files.createTempDirectory("flatpak-settings-capture").toFile()
         File(projectDir, "settings.gradle.kts").writeText(
             """
             plugins {
@@ -165,7 +166,7 @@ class FlatpakSourcesPluginFunctionalTest {
 
     @Test
     fun `settings plugin works with included build reuse pattern`() {
-        val projectDir = createTempDir("flatpak-reuse")
+        val projectDir = Files.createTempDirectory("flatpak-reuse").toFile()
         File(projectDir, "settings.gradle.kts").writeText(
             """
             plugins {
@@ -187,7 +188,7 @@ class FlatpakSourcesPluginFunctionalTest {
     }
 
     private fun createTempProject(extraConfig: String = ""): File {
-        val projectDir = createTempDir("flatpak-sources-test")
+        val projectDir = Files.createTempDirectory("flatpak-sources-test").toFile()
         File(projectDir, "settings.gradle.kts").writeText(
             """
             rootProject.name = "test-project"
