@@ -1,6 +1,6 @@
 [versions]
 detekt = "1.23.8"
-nmcp = "1.4.4"
+nmcp = "1.5.0"
 
 [plugins]
 gradle-plugin-publish = { id = "com.gradle.plugin-publish", version = "2.1.1" }
