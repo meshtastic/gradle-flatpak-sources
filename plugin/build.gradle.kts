@@ -15,6 +15,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import org.gradle.plugin.compatibility.compatibility
+
 plugins {
     `kotlin-dsl`
     alias(libs.plugins.gradle.plugin.publish)
@@ -66,6 +68,11 @@ gradlePlugin {
                 "a Flathub-compliant flatpak-sources.json for offline Flatpak builds."
             implementationClass = "org.meshtastic.flatpak.sources.FlatpakSourcesPlugin"
             tags = listOf("flatpak", "flathub", "offline", "maven", "dependencies", "linux", "packaging")
+            compatibility {
+                features {
+                    configurationCache = false
+                }
+            }
         }
         create("flatpakSourcesSettings") {
             id = "org.meshtastic.flatpak.sources.settings"
@@ -74,6 +81,11 @@ gradlePlugin {
                 "no init script or -I flag needed. Recommended approach."
             implementationClass = "org.meshtastic.flatpak.sources.FlatpakSourcesSettingsPlugin"
             tags = listOf("flatpak", "flathub", "offline", "maven", "dependencies", "linux", "packaging")
+            compatibility {
+                features {
+                    configurationCache = false
+                }
+            }
         }
     }
 }
