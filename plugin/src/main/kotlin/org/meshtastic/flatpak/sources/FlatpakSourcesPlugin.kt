@@ -18,7 +18,7 @@ package org.meshtastic.flatpak.sources
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.gradle.api.internal.project.ProjectInternal
 import org.gradle.internal.operations.BuildOperationDescriptor
 import org.gradle.internal.operations.BuildOperationListener
@@ -161,13 +161,14 @@ class FlatpakSourcesPlugin : Plugin<Project> {
                     .filter { !it.startsWith("file:") }
 
             return try {
-                config.resolvedConfiguration.resolvedArtifacts.flatMap { artifact ->
-                    val mid = artifact.moduleVersion.id
+                config.incoming.artifacts.artifacts.flatMap { artifact ->
+                    val componentId = artifact.id.componentIdentifier
+                    if (componentId !is ModuleComponentIdentifier) return@flatMap emptyList()
                     project.logger.lifecycle(
                         "flatpak-sources: force-resolved {} (platform artifact)",
-                        "${mid.group}:${mid.name}:${mid.version}",
+                        "${componentId.group}:${componentId.module}:${componentId.version}",
                     )
-                    artifactToUrls(mid, artifact.file.name, repoUrls)
+                    artifactToUrls(componentId, artifact.file.name, repoUrls)
                 }
             } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
                 project.logger.warn("flatpak-sources: platform resolution failed — {}", e.message)
@@ -176,14 +177,14 @@ class FlatpakSourcesPlugin : Plugin<Project> {
         }
 
         private fun artifactToUrls(
-            mid: ModuleVersionIdentifier,
+            mid: ModuleComponentIdentifier,
             filename: String,
             repoUrls: List<String>,
         ): List<String> {
             val groupPath = mid.group.replace('.', '/')
-            val pomFile = "${mid.name}-${mid.version}.pom"
+            val pomFile = "${mid.module}-${mid.version}.pom"
             return repoUrls.flatMap { repoUrl ->
-                val base = "$repoUrl/$groupPath/${mid.name}/${mid.version}"
+                val base = "$repoUrl/$groupPath/${mid.module}/${mid.version}"
                 buildList {
                     add("$base/$filename")
                     if (filename != pomFile) add("$base/$pomFile")

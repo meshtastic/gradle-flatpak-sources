@@ -46,7 +46,7 @@ import java.util.concurrent.ConcurrentHashMap
  * ```kotlin
  * // settings.gradle.kts
  * plugins {
- *     id("org.meshtastic.flatpak.sources.settings") version "0.1.0"
+ *     id("org.meshtastic.flatpak.sources.settings") version "0.1.2"
  * }
  * ```
  */
