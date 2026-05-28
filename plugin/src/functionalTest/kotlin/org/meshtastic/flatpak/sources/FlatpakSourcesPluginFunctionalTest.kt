@@ -10,13 +10,17 @@ package org.meshtastic.flatpak.sources
 
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
+import org.junit.jupiter.api.io.TempDir
 import java.io.File
-import java.nio.file.Files
+import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class FlatpakSourcesPluginFunctionalTest {
+
+    @TempDir
+    lateinit var tempDir: Path
 
     @Test
     fun `plugin applies successfully and task exists`() {
@@ -68,7 +72,7 @@ class FlatpakSourcesPluginFunctionalTest {
 
     @Test
     fun `multi-module project works`() {
-        val projectDir = Files.createTempDirectory("flatpak-multimodule").toFile()
+        val projectDir = tempDir.resolve("multimodule").toFile().apply { mkdirs() }
         File(projectDir, "settings.gradle.kts").writeText(
             """
             rootProject.name = "multi-module-test"
@@ -106,7 +110,7 @@ class FlatpakSourcesPluginFunctionalTest {
 
     @Test
     fun `settings plugin applies project plugin and task exists`() {
-        val projectDir = Files.createTempDirectory("flatpak-settings").toFile()
+        val projectDir = tempDir.resolve("settings").toFile().apply { mkdirs() }
         File(projectDir, "settings.gradle.kts").writeText(
             """
             plugins {
@@ -129,7 +133,7 @@ class FlatpakSourcesPluginFunctionalTest {
 
     @Test
     fun `settings plugin captures URLs without init script warning`() {
-        val projectDir = Files.createTempDirectory("flatpak-settings-capture").toFile()
+        val projectDir = tempDir.resolve("settings-capture").toFile().apply { mkdirs() }
         File(projectDir, "settings.gradle.kts").writeText(
             """
             plugins {
@@ -166,7 +170,7 @@ class FlatpakSourcesPluginFunctionalTest {
 
     @Test
     fun `settings plugin works with included build reuse pattern`() {
-        val projectDir = Files.createTempDirectory("flatpak-reuse").toFile()
+        val projectDir = tempDir.resolve("reuse").toFile().apply { mkdirs() }
         File(projectDir, "settings.gradle.kts").writeText(
             """
             plugins {
@@ -188,7 +192,7 @@ class FlatpakSourcesPluginFunctionalTest {
     }
 
     private fun createTempProject(extraConfig: String = ""): File {
-        val projectDir = Files.createTempDirectory("flatpak-sources-test").toFile()
+        val projectDir = tempDir.resolve("project").toFile().apply { mkdirs() }
         File(projectDir, "settings.gradle.kts").writeText(
             """
             rootProject.name = "test-project"
