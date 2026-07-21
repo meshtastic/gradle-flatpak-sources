@@ -1,10 +1,12 @@
 [versions]
 detekt = "1.23.8"
+dokka = "2.2.0"
 nmcp = "1.6.1"
 
 [plugins]
 gradle-plugin-publish = { id = "com.gradle.plugin-publish", version = "2.1.1" }
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
 nmcp = { id = "com.gradleup.nmcp", version.ref = "nmcp" }
 
 [libraries]
