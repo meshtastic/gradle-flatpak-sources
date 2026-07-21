@@ -5,7 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.2] - Unreleased
+## [Unreleased]
+
+## [0.1.4] - 2026-07-17
+
+### Changed
+
+- Update Gradle toolchain to 9.6.1
+- Update `com.gradleup.nmcp` to 1.6.1
+- Update `actions/checkout` to v7
+- Update `org.junit.platform:junit-platform-launcher` to 6.1.2
+- Add Renovate configuration with automerge
+
+## [0.1.3] - 2026-07-16 [YANKED]
+
+Burned tag: the publish failed and no artifacts were released to the Gradle
+Plugin Portal or Maven Central. Do not use — upgrade to 0.1.4 or later.
+
+## [0.1.2] - 2026-05-28
 
 ### Added
 
