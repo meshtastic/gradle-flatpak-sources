@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  GRADLE_CACHE_URL: ${{ secrets.GRADLE_CACHE_URL }}
+  GRADLE_CACHE_USERNAME: ${{ secrets.GRADLE_CACHE_USERNAME }}
+  GRADLE_CACHE_PASSWORD: ${{ secrets.GRADLE_CACHE_PASSWORD }}
+
 jobs:
   test:
     name: Test (Gradle ${{ matrix.gradle }})
