@@ -78,6 +78,11 @@ tasks {
     }
 }
 
+// Unit tests (plugin/src/test) use JUnit 5, matching the functional-test suite.
+tasks.test {
+    useJUnitPlatform()
+}
+
 gradlePlugin {
     website = "https://github.com/meshtastic/gradle-flatpak-sources"
     vcsUrl = "https://github.com/meshtastic/gradle-flatpak-sources.git"
