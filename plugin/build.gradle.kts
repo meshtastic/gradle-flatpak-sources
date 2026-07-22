@@ -21,6 +21,7 @@ plugins {
     `kotlin-dsl`
     alias(libs.plugins.gradle.plugin.publish)
     alias(libs.plugins.detekt)
+    alias(libs.plugins.dokka)
     alias(libs.plugins.nmcp)
     signing
 }
@@ -34,6 +35,27 @@ java {
     }
     withSourcesJar()
     withJavadocJar()
+}
+
+// Populate the Maven Central -javadoc.jar with real Dokka HTML. This plugin is
+// written in Kotlin, so the stock (Java-only) `javadoc` task produces nothing
+// and withJavadocJar() would otherwise ship an empty jar. Dokka renders the
+// public API; its HTML output is added to the javadoc jar.
+dokka {
+    moduleName.set("Gradle Flatpak Sources")
+    dokkaSourceSets.configureEach {
+        sourceLink {
+            localDirectory.set(file("src/main/kotlin"))
+            remoteUrl("https://github.com/meshtastic/gradle-flatpak-sources/blob/main/plugin/src/main/kotlin")
+            remoteLineSuffix.set("#L")
+        }
+    }
+}
+
+tasks.named<Jar>("javadocJar") {
+    dependsOn("dokkaGeneratePublicationHtml")
+    from(tasks.named("dokkaGeneratePublicationHtml"))
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 detekt {
