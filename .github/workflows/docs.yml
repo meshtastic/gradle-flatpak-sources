@@ -42,7 +42,7 @@ jobs:
         uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
 
       - name: Configure Pages
-        uses: actions/configure-pages@45bfe019a89a1e2b921f7ec9db1d69c48246c2e2 # v6.0.0
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
 
       - name: Build Dokka HTML documentation
         run: ./gradlew :plugin:dokkaGeneratePublicationHtml --no-daemon --stacktrace
