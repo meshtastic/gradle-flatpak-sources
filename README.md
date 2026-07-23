@@ -1,6 +1,7 @@
 # gradle-flatpak-sources
 
 [![CI](https://github.com/meshtastic/gradle-flatpak-sources/actions/workflows/ci.yml/badge.svg)](https://github.com/meshtastic/gradle-flatpak-sources/actions/workflows/ci.yml)
+[![API docs](https://img.shields.io/badge/API_docs-Dokka-blue.svg)](https://meshtastic.github.io/gradle-flatpak-sources/)
 [![Gradle Plugin Portal](https://img.shields.io/gradle-plugin-portal/v/org.meshtastic.flatpak.sources.settings)](https://plugins.gradle.org/plugin/org.meshtastic.flatpak.sources.settings)
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/License-GPL--3.0--or--later-blue.svg)](COPYING)
 [![CLA assistant](https://cla-assistant.io/readme/badge/meshtastic/gradle-flatpak-sources)](https://cla-assistant.io/meshtastic/gradle-flatpak-sources)
