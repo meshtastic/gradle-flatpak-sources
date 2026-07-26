@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-07-26
+
+No change to plugin behaviour — the generated `flatpak-sources.json` is identical to
+0.1.4. This release exists to ship the packaging and documentation fixes below.
+
+### Fixed
+
+- The published `-javadoc.jar` now contains the real Dokka HTML API reference. Every
+  release up to and including 0.1.4 shipped a 261-byte empty stub, because the plugin
+  is written in Kotlin and the stock Java `javadoc` task produced nothing (#14).
+- `COPYING` now carries the complete FSF GPL-3.0 text. It was previously abbreviated,
+  which left GitHub reporting the licence as "Other" rather than GPL-3.0 (#11).
+
+### Added
+
+- Browsable API documentation published to GitHub Pages at
+  <https://meshtastic.github.io/gradle-flatpak-sources/>, built by Dokka on every push
+  to `main` (#21).
+- Unit tests for the `MirrorGenerator` and `CacheFileLocator` internals, alongside the
+  existing TestKit functional suite (#19).
+- Community-health files (`CONTRIBUTING`, `CODE_OF_CONDUCT`, `SECURITY`, `CODEOWNERS`,
+  issue and PR templates) (#17, #18).
+
+### Security
+
+- Every third-party GitHub Action is pinned to a full commit SHA, workflows run with
+  least-privilege `contents: read`, the Gradle wrapper is pinned by SHA-256 checksum,
+  and CodeQL, OpenSSF Scorecard, and dependency-review analysis now run on the
+  repository (#13, #17, #20, #21). CI-only — the published plugin is unaffected.
+
 ## [0.1.4] - 2026-07-17
 
 ### Changed
