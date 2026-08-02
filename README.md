@@ -5,6 +5,7 @@
 [![Gradle Plugin Portal](https://img.shields.io/gradle-plugin-portal/v/org.meshtastic.flatpak.sources.settings)](https://plugins.gradle.org/plugin/org.meshtastic.flatpak.sources.settings)
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/License-GPL--3.0--or--later-blue.svg)](COPYING)
 [![CLA assistant](https://cla-assistant.io/readme/badge/meshtastic/gradle-flatpak-sources)](https://cla-assistant.io/meshtastic/gradle-flatpak-sources)
+[![Revved up by Develocity](https://img.shields.io/badge/Revved%20up%20by-Develocity-06A0CE?logo=Gradle&labelColor=02303A)](https://community.develocity.cloud/scans?search.rootProjectNames=gradle-flatpak-sources)
 
 A Gradle plugin that generates [Flathub-compliant](https://docs.flathub.org/docs/for-app-authors/requirements#no-network-access) offline dependency manifests (`flatpak-sources.json`) for Flatpak builds.
 
