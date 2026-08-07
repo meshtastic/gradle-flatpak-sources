@@ -68,7 +68,7 @@ dependencies {
     detektPlugins(libs.detekt.formatting)
     testImplementation(gradleTestKit())
     testImplementation(kotlin("test-junit5"))
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.2")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.3")
 }
 
 tasks {
