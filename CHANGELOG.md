@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.7]
+
+### Fixed
+
+- **Isolated Projects compatibility.** The settings plugin published its captured URL set and
+  repo-URL list onto `settings.gradle.extensions`, and the project plugin read them back via
+  `project.gradle.extensions.findByName(...)` — a cross-project read through the shared `Gradle`
+  object, which Isolated Projects forbids. Both now flow through the existing
+  `UrlCaptureBuildService` (already registered for the `BuildOperationListener`), which both
+  plugins look up by name — `BuildService` is Gradle's sanctioned cross-project sharing
+  primitive. A second, separate config-cache violation surfaced once the first was fixed:
+  `captureFlatpakSources` captured a live `Project` reference inside `doLast`; that resolution
+  now happens in the task-registration block instead, which is already lazy, so the same
+  on-demand timing holds without crossing a live `Project` into the execution closure (#36).
+
 ## [0.1.6]
 
 No change to plugin behaviour — the generated `flatpak-sources.json` is identical to
