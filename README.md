@@ -16,7 +16,7 @@ Apply the settings plugin in `settings.gradle.kts` — it captures every depende
 ```kotlin
 // settings.gradle.kts
 plugins {
-    id("org.meshtastic.flatpak.sources.settings") version "0.1.5"
+    id("org.meshtastic.flatpak.sources.settings") version "0.1.6"
 }
 ```
 
@@ -45,7 +45,7 @@ If your project uses an included build for convention plugins, apply the setting
 ```kotlin
 // build-logic/settings.gradle.kts
 plugins {
-    id("org.meshtastic.flatpak.sources.settings") version "0.1.5"
+    id("org.meshtastic.flatpak.sources.settings") version "0.1.6"
 }
 ```
 
