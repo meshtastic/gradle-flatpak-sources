@@ -54,29 +54,8 @@ class FlatpakSourcesPlugin : Plugin<Project> {
         val extension = target.extensions.create("flatpakSources", FlatpakSourcesExtension::class.java)
         extension.outputFile.convention(target.layout.buildDirectory.file("flatpak-sources.json"))
 
-        // The settings plugin registers this exact service (by name — sharedServices is a singleton registry)
-        // before any resolution happens; registerIfAbsent here just returns that same instance rather than
-        // creating a new one. Isolated-Projects-safe: unlike gradle.extensions, a BuildService is a sanctioned
-        // cross-project channel, not a read through another project's entry on the shared Gradle object.
-        // If the settings plugin isn't applied, this registers a fresh (empty) service and we fall back to a
-        // locally-attached listener below — it won't capture bootstrap downloads but gets everything from here on.
-        val urlCaptureService: Provider<UrlCaptureBuildService> =
-            target.gradle.sharedServices.registerIfAbsent(
-                URL_CAPTURE_SERVICE_NAME,
-                UrlCaptureBuildService::class.java,
-            ) {}
-
-        val capturedUrls: MutableSet<String> =
-            urlCaptureService.get().capturedUrls
-                ?: ConcurrentHashMap.newKeySet<String>().also { fallback ->
-                    urlCaptureService.get().capturedUrls = fallback
-                    val manager = (target as ProjectInternal).services.get(BuildOperationListenerManager::class.java)
-                    manager.addListener(OpListener(fallback))
-                    target.logger.warn(
-                        "flatpak-sources: settings plugin not applied — bootstrap downloads will be missing. " +
-                            "Add id(\"org.meshtastic.flatpak.sources.settings\") to settings.gradle.kts.",
-                    )
-                }
+        val urlCaptureService = registerUrlCaptureService(target)
+        val capturedUrls = resolveCapturedUrls(target, urlCaptureService)
 
         target.tasks.register("captureFlatpakSources") {
             group = "flatpak"
@@ -130,6 +109,37 @@ class FlatpakSourcesPlugin : Plugin<Project> {
             }
         }
     }
+
+    /**
+     * Looks up the [UrlCaptureBuildService] the settings plugin registered (by name — `sharedServices` is a
+     * singleton registry, so this returns the existing instance rather than creating a new one). Isolated-Projects-
+     * safe: unlike `gradle.extensions`, a `BuildService` is a sanctioned cross-project channel, not a read through
+     * another project's entry on the shared `Gradle` object.
+     */
+    private fun registerUrlCaptureService(target: Project): Provider<UrlCaptureBuildService> =
+        target.gradle.sharedServices.registerIfAbsent(
+            URL_CAPTURE_SERVICE_NAME,
+            UrlCaptureBuildService::class.java,
+        ) {}
+
+    /**
+     * If the settings plugin isn't applied, [urlCaptureService] holds a fresh (empty) instance — fall back to a
+     * locally-attached listener. It won't capture bootstrap downloads but gets everything from here on.
+     */
+    private fun resolveCapturedUrls(
+        target: Project,
+        urlCaptureService: Provider<UrlCaptureBuildService>,
+    ): MutableSet<String> =
+        urlCaptureService.get().capturedUrls
+            ?: ConcurrentHashMap.newKeySet<String>().also { fallback ->
+                urlCaptureService.get().capturedUrls = fallback
+                val manager = (target as ProjectInternal).services.get(BuildOperationListenerManager::class.java)
+                manager.addListener(OpListener(fallback))
+                target.logger.warn(
+                    "flatpak-sources: settings plugin not applied — bootstrap downloads will be missing. " +
+                        "Add id(\"org.meshtastic.flatpak.sources.settings\") to settings.gradle.kts.",
+                )
+            }
 
     private class OpListener(private val urls: MutableSet<String>) : BuildOperationListener {
         override fun started(op: BuildOperationDescriptor, e: OperationStartEvent) = Unit
