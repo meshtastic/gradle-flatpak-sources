@@ -191,6 +191,61 @@ class FlatpakSourcesPluginFunctionalTest {
         assertEquals(TaskOutcome.SUCCESS, result.task(":captureFlatpakSources")?.outcome)
     }
 
+    @Test
+    fun `settings plugin works under Isolated Projects in a multi-module build`() {
+        // Regression test: the settings plugin used to publish capturedUrls/repoUrls onto
+        // gradle.extensions, and FlatpakSourcesPlugin (applied to the root project) read them back
+        // via project.gradle.extensions.findByName(...) — a cross-project read through the shared
+        // Gradle object, which Isolated Projects forbids. Both now flow through a BuildService
+        // instead (Gradle's sanctioned cross-project sharing primitive), looked up by name from
+        // either project. This test only proves anything with a real second project + IP enabled.
+        val projectDir = tempDir.resolve("isolated-projects").toFile().apply { mkdirs() }
+        File(projectDir, "settings.gradle.kts").writeText(
+            """
+            plugins {
+                id("org.meshtastic.flatpak.sources.settings")
+            }
+            rootProject.name = "isolated-projects-test"
+            include(":lib")
+            """.trimIndent(),
+        )
+        File(projectDir, "build.gradle.kts").writeText(
+            """
+            flatpakSources {
+                mustRunAfterTasks.set(listOf(":lib:compileJava"))
+            }
+            """.trimIndent(),
+        )
+        val libDir = File(projectDir, "lib").apply { mkdirs() }
+        File(libDir, "build.gradle.kts").writeText(
+            """
+            plugins {
+                java
+            }
+            repositories {
+                mavenCentral()
+            }
+            """.trimIndent(),
+        )
+        File(libDir, "src/main/java").mkdirs()
+
+        val result = GradleRunner.create()
+            .withProjectDir(projectDir)
+            .withPluginClasspath()
+            .withArguments(
+                "captureFlatpakSources",
+                "--configuration-cache",
+                "-Dorg.gradle.unsafe.isolated-projects=true",
+                "--stacktrace",
+            )
+            .build()
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":captureFlatpakSources")?.outcome)
+        val content = File(projectDir, "build/flatpak-sources.json").readText().trim()
+        assertTrue(content.startsWith("["))
+        assertTrue(content.endsWith("]"))
+    }
+
     private fun createTempProject(extraConfig: String = ""): File {
         val projectDir = tempDir.resolve("project").toFile().apply { mkdirs() }
         File(projectDir, "settings.gradle.kts").writeText(

@@ -20,6 +20,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.api.provider.Provider
 import org.gradle.internal.operations.BuildOperationDescriptor
 import org.gradle.internal.operations.BuildOperationListener
 import org.gradle.internal.operations.BuildOperationListenerManager
@@ -53,20 +54,8 @@ class FlatpakSourcesPlugin : Plugin<Project> {
         val extension = target.extensions.create("flatpakSources", FlatpakSourcesExtension::class.java)
         extension.outputFile.convention(target.layout.buildDirectory.file("flatpak-sources.json"))
 
-        // The settings plugin registers this URL set before any resolution happens. If it isn't present
-        // (plugin applied directly without the settings plugin), register a fallback listener.
-        // It won't capture bootstrap downloads but will get everything from this point forward.
-        @Suppress("UNCHECKED_CAST")
-        val capturedUrls: MutableSet<String> =
-            (target.gradle.extensions.findByName(CAPTURED_URLS_KEY) as? MutableSet<String>)
-                ?: ConcurrentHashMap.newKeySet<String>().also { fallback ->
-                    val manager = (target as ProjectInternal).services.get(BuildOperationListenerManager::class.java)
-                    manager.addListener(OpListener(fallback))
-                    target.logger.warn(
-                        "flatpak-sources: settings plugin not applied — bootstrap downloads will be missing. " +
-                            "Add id(\"org.meshtastic.flatpak.sources.settings\") to settings.gradle.kts.",
-                    )
-                }
+        val urlCaptureService = registerUrlCaptureService(target)
+        val capturedUrls = resolveCapturedUrls(target, urlCaptureService)
 
         target.tasks.register("captureFlatpakSources") {
             group = "flatpak"
@@ -77,26 +66,31 @@ class FlatpakSourcesPlugin : Plugin<Project> {
             val afterTasks = extension.mustRunAfterTasks.get()
             if (afterTasks.isNotEmpty()) mustRunAfter(afterTasks)
 
-            val proj = target
             val urlsRef = capturedUrls
             val outFile = extension.outputFile
             val destPrefix = extension.destPrefix
             val excludeSuffixes = extension.excludeSuffixes
             val generateMirrors = extension.generateMirrors
-            val platforms = extension.targetPlatforms
-            val platformDeps = extension.platformDependencies
             val filesRoot = File(target.gradle.gradleUserHomeDir, "caches/modules-2/files-2.1")
 
-            doLast {
-                val platformUrls =
-                    resolvePlatformArtifacts(proj, platforms.getOrElse(emptySet()), platformDeps.getOrElse(emptySet()))
+            // Config-cache/Isolated-Projects forbid capturing a live Project (or anything holding one, like a
+            // detached Configuration) inside doLast. tasks.register {} is already lazy — this block only runs
+            // when the task is actually needed — so resolving here instead of in doLast still only happens
+            // on-demand; it just does so at configuration time rather than execution time. Only the plain
+            // List<String>/Logger results below cross into the doLast closure.
+            val platformUrls =
+                resolvePlatformArtifacts(
+                    target,
+                    extension.targetPlatforms.getOrElse(emptySet()),
+                    extension.platformDependencies.getOrElse(emptySet()),
+                )
+            val logger = target.logger
 
-                @Suppress("UNCHECKED_CAST")
-                val repoUrls =
-                    proj.gradle.extensions.findByName(REPO_URLS_KEY) as? List<String> ?: emptyList()
+            doLast {
+                val repoUrls = urlCaptureService.get().repoUrls
                 val cacheUrls =
                     if (repoUrls.isNotEmpty()) {
-                        scanCacheForMissingArtifacts(filesRoot, urlsRef, repoUrls, proj.logger)
+                        scanCacheForMissingArtifacts(filesRoot, urlsRef, repoUrls, logger)
                     } else {
                         emptyList()
                     }
@@ -109,12 +103,43 @@ class FlatpakSourcesPlugin : Plugin<Project> {
                         excludeSuffixes = excludeSuffixes.get(),
                         generateMirrors = generateMirrors.get(),
                         repoUrls = repoUrls,
-                        logger = proj.logger,
+                        logger = logger,
                     )
                 writer.write(allUrls, outFile.get().asFile)
             }
         }
     }
+
+    /**
+     * Looks up the [UrlCaptureBuildService] the settings plugin registered (by name — `sharedServices` is a
+     * singleton registry, so this returns the existing instance rather than creating a new one). Isolated-Projects-
+     * safe: unlike `gradle.extensions`, a `BuildService` is a sanctioned cross-project channel, not a read through
+     * another project's entry on the shared `Gradle` object.
+     */
+    private fun registerUrlCaptureService(target: Project): Provider<UrlCaptureBuildService> =
+        target.gradle.sharedServices.registerIfAbsent(
+            URL_CAPTURE_SERVICE_NAME,
+            UrlCaptureBuildService::class.java,
+        ) {}
+
+    /**
+     * If the settings plugin isn't applied, [urlCaptureService] holds a fresh (empty) instance — fall back to a
+     * locally-attached listener. It won't capture bootstrap downloads but gets everything from here on.
+     */
+    private fun resolveCapturedUrls(
+        target: Project,
+        urlCaptureService: Provider<UrlCaptureBuildService>,
+    ): MutableSet<String> =
+        urlCaptureService.get().capturedUrls
+            ?: ConcurrentHashMap.newKeySet<String>().also { fallback ->
+                urlCaptureService.get().capturedUrls = fallback
+                val manager = (target as ProjectInternal).services.get(BuildOperationListenerManager::class.java)
+                manager.addListener(OpListener(fallback))
+                target.logger.warn(
+                    "flatpak-sources: settings plugin not applied — bootstrap downloads will be missing. " +
+                        "Add id(\"org.meshtastic.flatpak.sources.settings\") to settings.gradle.kts.",
+                )
+            }
 
     private class OpListener(private val urls: MutableSet<String>) : BuildOperationListener {
         override fun started(op: BuildOperationDescriptor, e: OperationStartEvent) = Unit
@@ -127,8 +152,7 @@ class FlatpakSourcesPlugin : Plugin<Project> {
     }
 
     companion object {
-        internal const val CAPTURED_URLS_KEY = "flatpakSourcesCapturedUrls"
-        internal const val REPO_URLS_KEY = "flatpakSourcesRepoUrls"
+        internal const val URL_CAPTURE_SERVICE_NAME = "flatpakSourcesUrlCapture"
 
         /**
          * Force-resolves platform-specific dependencies that wouldn't normally resolve on the current host OS.

@@ -57,11 +57,10 @@ class FlatpakSourcesSettingsPlugin : Plugin<Settings> {
         if (settings.gradle.startParameter.isOffline) return
 
         val capturedUrls: MutableSet<String> = ConcurrentHashMap.newKeySet()
-        settings.gradle.extensions.add(FlatpakSourcesPlugin.CAPTURED_URLS_KEY, capturedUrls)
 
         val serviceProvider: Provider<UrlCaptureBuildService> =
             settings.gradle.sharedServices.registerIfAbsent(
-                "flatpakSourcesUrlCapture",
+                FlatpakSourcesPlugin.URL_CAPTURE_SERVICE_NAME,
                 UrlCaptureBuildService::class.java,
             ) {}
         serviceProvider.get().capturedUrls = capturedUrls
@@ -73,8 +72,7 @@ class FlatpakSourcesSettingsPlugin : Plugin<Settings> {
         // Defer repo URL collection to rootProject{} so dependencyResolutionManagement.repositories
         // is fully populated (it's configured after plugins{} in settings.gradle.kts).
         settings.gradle.rootProject {
-            val repoUrls = collectRepoUrls(settings)
-            settings.gradle.extensions.add(FlatpakSourcesPlugin.REPO_URLS_KEY, repoUrls)
+            serviceProvider.get().repoUrls = collectRepoUrls(settings)
             plugins.apply(FlatpakSourcesPlugin::class.java)
         }
     }
@@ -120,12 +118,19 @@ class FlatpakSourcesSettingsPlugin : Plugin<Settings> {
  *
  * Same pattern as `gradle/github-dependency-graph-gradle-plugin`. Supports multiple concurrent listeners — coexists
  * with Develocity.
+ *
+ * Also doubles as the Isolated-Projects-safe channel between the settings plugin and [FlatpakSourcesPlugin]: both
+ * look up this exact instance via `gradle.sharedServices.registerIfAbsent(URL_CAPTURE_SERVICE_NAME, ...)` (a
+ * singleton keyed by name), instead of stashing state on `gradle.extensions` — reading another project's entry off
+ * the shared `Gradle` object is exactly what Isolated Projects forbids, while `BuildService` is the sanctioned
+ * cross-project sharing primitive.
  */
 abstract class UrlCaptureBuildService :
     BuildService<BuildServiceParameters.None>,
     BuildOperationListener {
 
-    internal lateinit var capturedUrls: MutableSet<String>
+    internal var capturedUrls: MutableSet<String>? = null
+    internal var repoUrls: List<String> = emptyList()
 
     override fun started(op: BuildOperationDescriptor, e: OperationStartEvent) = Unit
 
@@ -134,6 +139,6 @@ abstract class UrlCaptureBuildService :
     override fun finished(op: BuildOperationDescriptor, e: OperationFinishEvent) {
         val details = op.details as? ExternalResourceReadBuildOperationType.Details ?: return
         if (e.failure != null) return
-        capturedUrls.add(details.location)
+        capturedUrls?.add(details.location)
     }
 }
