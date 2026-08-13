@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.6]
+
+No change to plugin behaviour — the generated `flatpak-sources.json` is identical to
+0.1.5. Dependency and CI maintenance only.
+
+### Changed
+
+- Update Gradle to v9.7.0 (#32).
+- Update `org.junit.platform:junit-platform-launcher` to v6.1.3 (#33).
+- Update `actions/setup-java` to v5.7.0 (#27); update `gradle/actions` to v6.3.0 (#29).
+- Update `github/codeql-action` to v4.37.4 through v4.37.7 (#26, #30, #31, #34).
+
+### Added
+
+- Onboarded to the OSS Community Develocity instance for Build Scans and remote
+  caching (#28).
+
 ## [0.1.5] - 2026-07-26
 
 No change to plugin behaviour — the generated `flatpak-sources.json` is identical to
