@@ -16,17 +16,28 @@ Apply the settings plugin in `settings.gradle.kts` — it captures every depende
 ```kotlin
 // settings.gradle.kts
 plugins {
-    id("org.meshtastic.flatpak.sources.settings") version "0.2.0"
+    id("org.meshtastic.flatpak.sources.settings") version "0.2.1"
 }
 ```
 
-Then generate the manifest using a fresh cache to force all artifacts to re-download:
+Then generate the manifest against an **empty** Gradle User Home, so every artifact is
+actually downloaded and therefore captured:
 
 ```bash
-./gradlew --no-build-cache --no-configuration-cache \
-    -Dgradle.user.home=/tmp/flatpak-gradle-home \
+GRADLE_HOME=$(mktemp -d)
+./gradlew --no-build-cache \
+    -Dgradle.user.home="$GRADLE_HOME" \
     :app:assemble :captureFlatpakSources
 ```
+
+The empty home is what forces the downloads — capture works by observing them, so anything
+already in `caches/modules-2` is never fetched and never lands in the manifest. A fixed path
+like `/tmp/flatpak-gradle-home` is only empty the first time; reusing it silently produces a
+short manifest. `--refresh-dependencies` is not a substitute: it re-checks metadata and skips
+artifacts whose checksums still match.
+
+`--no-build-cache` is about task outputs, not downloads. Neither flag concerns the
+configuration cache, which is supported from 0.2.1 on.
 
 The output is written to `build/flatpak-sources.json` by default.
 
@@ -45,7 +56,7 @@ If your project uses an included build for convention plugins, apply the setting
 ```kotlin
 // build-logic/settings.gradle.kts
 plugins {
-    id("org.meshtastic.flatpak.sources.settings") version "0.2.0"
+    id("org.meshtastic.flatpak.sources.settings") version "0.2.1"
 }
 ```
 
@@ -114,7 +125,16 @@ Each coordinate also resolves in its own configuration, so one entry that cannot
 
 - **Gradle 9.0+**
 - **JDK 17+**
-- **`--no-configuration-cache`** — the capture mechanism uses runtime state that is not configuration-cache-safe
+
+The configuration cache is supported from **0.2.1** on. Earlier versions required
+`--no-configuration-cache`: the capture task's action closed over the live URL set the
+build-operation listener writes to, so Gradle serialized a collection another thread was
+still mutating. Gradle 9.6.x wins that race often enough that it usually looked fine;
+9.7.x does not, and fails the build outright.
+
+On **0.2.0 specifically, pass `--no-configuration-cache`** — that release also drops every
+captured URL on a reused configuration cache entry, emitting an empty manifest rather than
+failing. Both are fixed in 0.2.1 (#45).
 
 ## Internal APIs
 
