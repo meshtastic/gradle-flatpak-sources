@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`platformDependencies` now resolves transitively.** A platform artifact's own natives are themselves
+  platform-specific, so they were just as absent from the generation host's resolution as the artifact
+  that pulls them — but force-resolution was non-transitive, which made enumerating them by hand, with
+  their versions and classifiers, the consumer's job. Those versions belong to POMs the consumer does not
+  own, nothing checked them, and a stale or missing entry surfaced only as `Could not find <jar>` minutes
+  into the offline build on the other architecture. Consumers should now name only what they depend on
+  directly: `desktop-jvm-<platform>` brings `skiko-awt-runtime-<platform>`, and maplibre-compose's desktop
+  runtime brings the maplibre-native-ffi and LWJGL natives.
+
+### Fixed
+
+- **One unresolvable platform coordinate no longer discards the rest.** Every coordinate shared a single
+  detached configuration, which resolved as a unit: one bad entry dropped *all* platform URLs from the
+  manifest, and the warning named none of them. Each coordinate now resolves in its own configuration,
+  and the warning names the one that failed.
+
 ## [0.1.7]
 
 ### Fixed

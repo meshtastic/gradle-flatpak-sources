@@ -158,6 +158,9 @@ class FlatpakSourcesPlugin : Plugin<Project> {
          * Force-resolves platform-specific dependencies that wouldn't normally resolve on the current host OS.
          * Downloads them into the standard Gradle cache so [SourcesWriter] can find them via the cache locator.
          *
+         * Each coordinate is resolved *transitively*, and in its own detached configuration — see
+         * [resolvePlatformCoordinate] for why both matter.
+         *
          * @return URLs reconstructed from the resolved artifact coordinates and repositories.
          */
         fun resolvePlatformArtifacts(
@@ -167,22 +170,41 @@ class FlatpakSourcesPlugin : Plugin<Project> {
         ): List<String> {
             if (platforms.isEmpty() || dependencyTemplates.isEmpty()) return emptyList()
 
-            val deps =
-                platforms.flatMap { platform ->
-                    dependencyTemplates.map { template ->
-                        project.dependencies.create(template.replace("{platform}", platform))
-                    }
-                }
-
-            val config = project.configurations.detachedConfiguration()
-            deps.forEach { config.dependencies.add(it) }
-            config.isTransitive = false
-
             val repoUrls =
                 project.repositories
                     .filterIsInstance<org.gradle.api.artifacts.repositories.MavenArtifactRepository>()
                     .map { it.url.toString().trimEnd('/') }
                     .filter { !it.startsWith("file:") }
+
+            return platforms.flatMap { platform ->
+                dependencyTemplates.flatMap { template ->
+                    resolvePlatformCoordinate(project, template.replace("{platform}", platform), repoUrls)
+                }
+            }
+        }
+
+        /**
+         * Force-resolves one platform coordinate and everything it depends on.
+         *
+         * Resolution is **transitive** because a platform artifact's own natives are themselves
+         * platform-specific, and so are just as absent from the generation host's resolution as the artifact
+         * that pulls them: `desktop-jvm-<platform>` needs `skiko-awt-runtime-<platform>`, and maplibre's
+         * desktop runtime needs both the maplibre-native-ffi natives and LWJGL's. Non-transitive resolution
+         * meant every consumer had to enumerate those by hand, version and classifier included, from POMs it
+         * does not own — which went stale silently and surfaced as `Could not find <jar>` minutes into the
+         * offline build on the other architecture.
+         *
+         * One configuration per coordinate, so an entry that cannot resolve costs only itself. A single shared
+         * configuration failed as a unit: one bad coordinate dropped every platform URL, and the warning named
+         * none of them.
+         */
+        private fun resolvePlatformCoordinate(
+            project: Project,
+            notation: String,
+            repoUrls: List<String>,
+        ): List<String> {
+            val config = project.configurations.detachedConfiguration(project.dependencies.create(notation))
+            config.isTransitive = true
 
             return try {
                 config.incoming.artifacts.artifacts.flatMap { artifact ->
@@ -195,7 +217,7 @@ class FlatpakSourcesPlugin : Plugin<Project> {
                     artifactToUrls(componentId, artifact.file.name, repoUrls)
                 }
             } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-                project.logger.warn("flatpak-sources: platform resolution failed — {}", e.message)
+                project.logger.warn("flatpak-sources: platform resolution failed for {} — {}", notation, e.message)
                 emptyList()
             }
         }
