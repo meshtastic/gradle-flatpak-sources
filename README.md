@@ -20,16 +20,24 @@ plugins {
 }
 ```
 
-Then generate the manifest using a fresh cache to force all artifacts to re-download:
+Then generate the manifest against an **empty** Gradle User Home, so every artifact is
+actually downloaded and therefore captured:
 
 ```bash
+GRADLE_HOME=$(mktemp -d)
 ./gradlew --no-build-cache \
-    -Dgradle.user.home=/tmp/flatpak-gradle-home \
+    -Dgradle.user.home="$GRADLE_HOME" \
     :app:assemble :captureFlatpakSources
 ```
 
-`--no-build-cache` is what forces the re-download; it is not about the configuration
-cache, which is supported from 0.2.1 on.
+The empty home is what forces the downloads — capture works by observing them, so anything
+already in `caches/modules-2` is never fetched and never lands in the manifest. A fixed path
+like `/tmp/flatpak-gradle-home` is only empty the first time; reusing it silently produces a
+short manifest. `--refresh-dependencies` is not a substitute: it re-checks metadata and skips
+artifacts whose checksums still match.
+
+`--no-build-cache` is about task outputs, not downloads. Neither flag concerns the
+configuration cache, which is supported from 0.2.1 on.
 
 The output is written to `build/flatpak-sources.json` by default.
 
