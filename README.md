@@ -85,8 +85,9 @@ flatpakSources {
     targetPlatforms.set(setOf("linux-x64", "linux-arm64"))
 
     // Maven coordinate templates for each platform target ({platform} is substituted).
+    // Resolved transitively, so name only the artifacts you depend on directly — their own
+    // platform-specific natives (skiko under compose-desktop, for instance) come along.
     platformDependencies.set(setOf(
-        "org.jetbrains.skiko:skiko-awt-runtime-{platform}:0.144.6",
         "org.jetbrains.compose.desktop:desktop-jvm-{platform}:1.11.0",
     ))
 }
@@ -100,10 +101,14 @@ When building on macOS but targeting Linux Flatpak, platform-specific natives (S
 flatpakSources {
     targetPlatforms.set(setOf("linux-x64", "linux-arm64"))
     platformDependencies.set(setOf(
-        "org.jetbrains.skiko:skiko-awt-runtime-{platform}:0.144.6",
+        "org.jetbrains.compose.desktop:desktop-jvm-{platform}:1.11.0",
     ))
 }
 ```
+
+Each coordinate is resolved **transitively**, so you only name what your build depends on directly. A platform artifact's own natives are platform-specific too — and just as absent from the generation host's resolution — so they are pulled in for you: `desktop-jvm-<platform>` brings `skiko-awt-runtime-<platform>`, and maplibre-compose's desktop runtime brings both the maplibre-native-ffi and LWJGL natives. Copying those out of POMs you don't own is not required, and was a standing source of drift.
+
+Each coordinate also resolves in its own configuration, so one entry that cannot be resolved does not cost the others; the warning names the coordinate that failed.
 
 ## Requirements
 
