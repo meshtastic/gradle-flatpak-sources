@@ -31,7 +31,6 @@ import org.gradle.internal.operations.OperationStartEvent
 import org.gradle.internal.resource.ExternalResourceReadBuildOperationType
 import org.meshtastic.flatpak.sources.internal.SourcesWriter
 import java.io.File
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Captures every external resource URL Gradle reads via the internal BuildOperationListener API and emits a
@@ -55,8 +54,7 @@ class FlatpakSourcesPlugin : Plugin<Project> {
         extension.outputFile.convention(target.layout.buildDirectory.file("flatpak-sources.json"))
 
         val urlCaptureService = registerUrlCaptureService(target)
-        // Called for its side effect only — the returned set must not be captured below, see doLast.
-        resolveCapturedUrls(target, urlCaptureService)
+        attachFallbackListenerIfNeeded(target, urlCaptureService)
 
         target.tasks.register("captureFlatpakSources") {
             group = "flatpak"
@@ -91,7 +89,7 @@ class FlatpakSourcesPlugin : Plugin<Project> {
                 val repoUrls = service.repoUrls
                 // Snapshot at execution: the listener keeps writing to this set, and capturing it live puts a
                 // mutating ConcurrentHashMap keyset in the CC entry, which Gradle fails to serialize.
-                val capturedUrls = service.capturedUrls?.toSet().orEmpty()
+                val capturedUrls = service.capturedUrls.toSet()
                 val cacheUrls =
                     if (repoUrls.isNotEmpty()) {
                         scanCacheForMissingArtifacts(filesRoot, capturedUrls, repoUrls, logger)
@@ -127,23 +125,22 @@ class FlatpakSourcesPlugin : Plugin<Project> {
         ) {}
 
     /**
-     * If the settings plugin isn't applied, [urlCaptureService] holds a fresh (empty) instance — fall back to a
-     * locally-attached listener. It won't capture bootstrap downloads but gets everything from here on.
+     * If the settings plugin isn't applied, nothing is listening yet — attach a local listener writing into the
+     * service's own set. It won't capture bootstrap downloads but gets everything from here on.
      */
-    private fun resolveCapturedUrls(
+    private fun attachFallbackListenerIfNeeded(
         target: Project,
         urlCaptureService: Provider<UrlCaptureBuildService>,
-    ): MutableSet<String> =
-        urlCaptureService.get().capturedUrls
-            ?: ConcurrentHashMap.newKeySet<String>().also { fallback ->
-                urlCaptureService.get().capturedUrls = fallback
-                val manager = (target as ProjectInternal).services.get(BuildOperationListenerManager::class.java)
-                manager.addListener(OpListener(fallback))
-                target.logger.warn(
-                    "flatpak-sources: settings plugin not applied — bootstrap downloads will be missing. " +
-                        "Add id(\"org.meshtastic.flatpak.sources.settings\") to settings.gradle.kts.",
-                )
-            }
+    ) {
+        val service = urlCaptureService.get()
+        if (service.settingsListenerAttached) return
+        val manager = (target as ProjectInternal).services.get(BuildOperationListenerManager::class.java)
+        manager.addListener(OpListener(service.capturedUrls))
+        target.logger.warn(
+            "flatpak-sources: settings plugin not applied — bootstrap downloads will be missing. " +
+                "Add id(\"org.meshtastic.flatpak.sources.settings\") to settings.gradle.kts.",
+        )
+    }
 
     private class OpListener(private val urls: MutableSet<String>) : BuildOperationListener {
         override fun started(op: BuildOperationDescriptor, e: OperationStartEvent) = Unit
