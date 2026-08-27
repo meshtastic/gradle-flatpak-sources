@@ -56,14 +56,12 @@ class FlatpakSourcesSettingsPlugin : Plugin<Settings> {
         // No-op in offline mode — there's nothing to capture and the project plugin isn't needed.
         if (settings.gradle.startParameter.isOffline) return
 
-        val capturedUrls: MutableSet<String> = ConcurrentHashMap.newKeySet()
-
         val serviceProvider: Provider<UrlCaptureBuildService> =
             settings.gradle.sharedServices.registerIfAbsent(
                 FlatpakSourcesPlugin.URL_CAPTURE_SERVICE_NAME,
                 UrlCaptureBuildService::class.java,
             ) {}
-        serviceProvider.get().capturedUrls = capturedUrls
+        serviceProvider.get().settingsListenerAttached = true
 
         val registry =
             (settings.gradle as GradleInternal).services.get(BuildEventListenerRegistryInternal::class.java)
@@ -129,7 +127,12 @@ abstract class UrlCaptureBuildService :
     BuildService<BuildServiceParameters.None>,
     BuildOperationListener {
 
-    internal var capturedUrls: MutableSet<String>? = null
+    // Owned here, not injected: on a reused configuration cache entry no plugin's apply() runs, so
+    // anything assigned from outside would be null and every captured URL silently dropped.
+    internal val capturedUrls: MutableSet<String> = ConcurrentHashMap.newKeySet()
+
+    /** Set by the settings plugin. False means only [FlatpakSourcesPlugin]'s fallback listener is attached. */
+    internal var settingsListenerAttached: Boolean = false
     internal var repoUrls: List<String> = emptyList()
 
     override fun started(op: BuildOperationDescriptor, e: OperationStartEvent) = Unit
@@ -139,6 +142,6 @@ abstract class UrlCaptureBuildService :
     override fun finished(op: BuildOperationDescriptor, e: OperationFinishEvent) {
         val details = op.details as? ExternalResourceReadBuildOperationType.Details ?: return
         if (e.failure != null) return
-        capturedUrls?.add(details.location)
+        capturedUrls.add(details.location)
     }
 }

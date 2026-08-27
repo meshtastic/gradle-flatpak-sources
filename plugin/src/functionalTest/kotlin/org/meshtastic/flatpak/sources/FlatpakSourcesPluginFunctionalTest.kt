@@ -8,6 +8,7 @@
  */
 package org.meshtastic.flatpak.sources
 
+import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
 import org.junit.jupiter.api.io.TempDir
@@ -244,6 +245,66 @@ class FlatpakSourcesPluginFunctionalTest {
         val content = File(projectDir, "build/flatpak-sources.json").readText().trim()
         assertTrue(content.startsWith("["))
         assertTrue(content.endsWith("]"))
+    }
+
+    @Test
+    fun `reused configuration cache entry reads the live captured set, not a serialized copy`() {
+        // Regression guard for the live-set capture. The entry is stored at the end of configuration,
+        // so a task action closing over the service's MutableSet serialized it while still empty; on
+        // reuse the action got that empty copy instead of what the listener had since collected.
+        // Markers injected at execution time (which still runs on a reused entry) expose the
+        // difference: buggy code reports 0 captured URLs on run 2, fixed code reports 2.
+        val projectDir = tempDir.resolve("cc-reuse").toFile().apply { mkdirs() }
+        File(projectDir, "settings.gradle.kts").writeText(
+            """
+            plugins {
+                id("org.meshtastic.flatpak.sources.settings")
+            }
+            rootProject.name = "cc-reuse-test"
+            """.trimIndent(),
+        )
+        File(projectDir, "build.gradle.kts").writeText(
+            """
+            tasks.register("injectMarker") {
+                // Declared inside register{} so doLast captures these and not the enclosing script.
+                // The service Provider resolves at configuration time; capturedUrls is `internal`,
+                // so reach its mangled getter reflectively.
+                val capture = gradle.sharedServices.registrations.getByName("flatpakSourcesUrlCapture").service
+                val markerFile = File(projectDir, "marker.txt")
+                doLast {
+                    val service = capture.get()
+                    val getter = service.javaClass.methods.first { it.name.startsWith("getCapturedUrls") }
+                    @Suppress("UNCHECKED_CAST")
+                    val urls = getter.invoke(service) as MutableSet<String>
+                    urls.addAll(markerFile.readLines().filter { it.isNotBlank() })
+                }
+            }
+
+            flatpakSources {
+                mustRunAfterTasks.set(listOf(":injectMarker"))
+            }
+            """.trimIndent(),
+        )
+
+        val marker = File(projectDir, "marker.txt")
+
+        fun run(): BuildResult =
+            GradleRunner.create()
+                .withProjectDir(projectDir)
+                .withPluginClasspath()
+                .withArguments("injectMarker", "captureFlatpakSources", "--configuration-cache", "--stacktrace")
+                .build()
+
+        marker.writeText("https://example.invalid/run-one.jar")
+        val first = run()
+        assertEquals(TaskOutcome.SUCCESS, first.task(":captureFlatpakSources")?.outcome)
+        assertTrue(first.output.contains("captured 1 URLs"), "first run should see its own marker")
+
+        marker.writeText("https://example.invalid/run-two-a.jar\nhttps://example.invalid/run-two-b.jar")
+        val second = run()
+        assertEquals(TaskOutcome.SUCCESS, second.task(":captureFlatpakSources")?.outcome)
+        assertTrue(second.output.contains("Configuration cache entry reused"), "second run must reuse the entry")
+        assertTrue(second.output.contains("captured 2 URLs"), "reused entry must read the live set, not a copy")
     }
 
     private fun createTempProject(extraConfig: String = ""): File {
