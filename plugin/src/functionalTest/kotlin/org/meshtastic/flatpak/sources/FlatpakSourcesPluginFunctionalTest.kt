@@ -244,6 +244,23 @@ class FlatpakSourcesPluginFunctionalTest {
         val content = File(projectDir, "build/flatpak-sources.json").readText().trim()
         assertTrue(content.startsWith("["))
         assertTrue(content.endsWith("]"))
+
+        // Second run on the stored entry. The task action must hold no captured URL collection: one
+        // would be serialized into the entry and come back as a stale copy disconnected from the
+        // live BuildService, so run 2 would silently emit run 1's URLs.
+        val reuse = GradleRunner.create()
+            .withProjectDir(projectDir)
+            .withPluginClasspath()
+            .withArguments(
+                "captureFlatpakSources",
+                "--configuration-cache",
+                "-Dorg.gradle.unsafe.isolated-projects=true",
+                "--stacktrace",
+            )
+            .build()
+
+        assertEquals(TaskOutcome.SUCCESS, reuse.task(":captureFlatpakSources")?.outcome)
+        assertTrue(reuse.output.contains("Configuration cache entry reused"))
     }
 
     private fun createTempProject(extraConfig: String = ""): File {

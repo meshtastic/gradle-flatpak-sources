@@ -55,7 +55,8 @@ class FlatpakSourcesPlugin : Plugin<Project> {
         extension.outputFile.convention(target.layout.buildDirectory.file("flatpak-sources.json"))
 
         val urlCaptureService = registerUrlCaptureService(target)
-        val capturedUrls = resolveCapturedUrls(target, urlCaptureService)
+        // Called for its side effect only — the returned set must not be captured below, see doLast.
+        resolveCapturedUrls(target, urlCaptureService)
 
         target.tasks.register("captureFlatpakSources") {
             group = "flatpak"
@@ -66,7 +67,6 @@ class FlatpakSourcesPlugin : Plugin<Project> {
             val afterTasks = extension.mustRunAfterTasks.get()
             if (afterTasks.isNotEmpty()) mustRunAfter(afterTasks)
 
-            val urlsRef = capturedUrls
             val outFile = extension.outputFile
             val destPrefix = extension.destPrefix
             val excludeSuffixes = extension.excludeSuffixes
@@ -87,15 +87,19 @@ class FlatpakSourcesPlugin : Plugin<Project> {
             val logger = target.logger
 
             doLast {
-                val repoUrls = urlCaptureService.get().repoUrls
+                val service = urlCaptureService.get()
+                val repoUrls = service.repoUrls
+                // Snapshot at execution: the listener keeps writing to this set, and capturing it live puts a
+                // mutating ConcurrentHashMap keyset in the CC entry, which Gradle fails to serialize.
+                val capturedUrls = service.capturedUrls?.toSet().orEmpty()
                 val cacheUrls =
                     if (repoUrls.isNotEmpty()) {
-                        scanCacheForMissingArtifacts(filesRoot, urlsRef, repoUrls, logger)
+                        scanCacheForMissingArtifacts(filesRoot, capturedUrls, repoUrls, logger)
                     } else {
                         emptyList()
                     }
 
-                val allUrls = urlsRef.toList() + platformUrls + cacheUrls
+                val allUrls = capturedUrls.toList() + platformUrls + cacheUrls
                 val writer =
                     SourcesWriter(
                         filesRoot = filesRoot,
