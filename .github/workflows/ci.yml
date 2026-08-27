@@ -20,7 +20,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        gradle: ['9.5.1']
+        # Floor, the consumers' pin, and current. The CC bugs in #45 reproduced only on 9.7.x —
+        # a single-version matrix is what let them ship.
+        gradle: ['9.5.1', '9.6.1', '9.7.1']
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
