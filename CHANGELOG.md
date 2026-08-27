@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0]
+
 ### Changed
 
 - **`platformDependencies` now resolves transitively.** A platform artifact's own natives are themselves
@@ -16,14 +18,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   own, nothing checked them, and a stale or missing entry surfaced only as `Could not find <jar>` minutes
   into the offline build on the other architecture. Consumers should now name only what they depend on
   directly: `desktop-jvm-<platform>` brings `skiko-awt-runtime-<platform>`, and maplibre-compose's desktop
-  runtime brings the maplibre-native-ffi and LWJGL natives.
+  runtime brings the maplibre-native-ffi and LWJGL natives (#43).
+- Update Gradle to v9.7.1 (#39).
+- Enable the configuration cache for the plugin's own build (#38).
+- Update `actions/setup-java` to v6 (#41); update `github/codeql-action` to v4.37.8 and
+  v4.37.9 (#40, #42).
 
 ### Fixed
 
 - **One unresolvable platform coordinate no longer discards the rest.** Every coordinate shared a single
   detached configuration, which resolved as a unit: one bad entry dropped *all* platform URLs from the
   manifest, and the warning named none of them. Each coordinate now resolves in its own configuration,
-  and the warning names the one that failed.
+  and the warning names the one that failed (#43).
 
 ## [0.1.7]
 
