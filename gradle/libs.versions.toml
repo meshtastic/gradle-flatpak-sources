@@ -1,7 +1,7 @@
 [versions]
 detekt = "1.23.8"
 dokka = "2.2.0"
-nmcp = "1.6.1"
+nmcp = "1.6.2"
 
 [plugins]
 gradle-plugin-publish = { id = "com.gradle.plugin-publish", version = "2.1.1" }
