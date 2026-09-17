@@ -40,9 +40,19 @@ Thank you for your interest in contributing! We welcome contributions from every
 - Enable **"Allow edits by maintainers"**.
 - Be responsive to review feedback.
 
+## Changelog
+
+[`CHANGELOG.md`](CHANGELOG.md) is hand-written in [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) form. The JetBrains [gradle-changelog-plugin](https://github.com/JetBrains/gradle-changelog-plugin) parses and renders it and never generates an entry from a commit.
+
+Add an entry under `## [Unreleased]` for anything a consuming build would notice — a change to the `flatpakSources { }` DSL, a task name or its inputs/outputs, the shape of the generated `flatpak-sources.json`, a new minimum Gradle version, configuration-cache or isolated-projects behaviour, or a fix someone could have hit. Refactors, test-only changes and CI work need none.
+
+Group order is `Breaking, Added, Changed, Deprecated, Removed, Fixed, Security`. `Breaking` leads because a Gradle plugin's contract is its DSL, its task names and its behaviour inside someone else's build — "do I have to change my build script" is the first question a consumer has. This repo publishes no `api/*.api` dump, so there is no dump-moved rule; the DSL and the generated manifest are the surface to watch instead.
+
 ## Versioning & Releases
 
-The source carries a `-SNAPSHOT` version. Releases are triggered by pushing a `v*` tag (e.g., `v0.1.0`). The CI workflow builds, tests, and publishes to the Gradle Plugin Portal and Maven Central.
+The version lives in `gradle.properties` as `version=`; `-SNAPSHOT` is appended only transiently by `snapshot.yml` via `-PsnapshotBuild`, and is not carried in the file. Releases are triggered by pushing a `v*` tag (e.g., `v0.1.0`). The publish workflow checks that the tag, `gradle.properties` and the `CHANGELOG.md` heading all agree, then builds, tests, and publishes to the Gradle Plugin Portal and Maven Central.
+
+Before tagging, run `./gradlew patchChangelog`: it cuts the `## [Unreleased]` entries into a dated `## [X.Y.Z]` heading, leaves an empty Unreleased behind, and writes the compare links — reading `version=`, so bump that first.
 
 ## CLA
 
