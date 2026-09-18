@@ -6,6 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.2.2]
+
+Maintenance release. No change to the plugin's public API, its task inputs or
+the manifests it generates.
+
+### Fixed
+
+- Pin the Gradle daemon to Java 21. A JDK 25 toolchain could otherwise select
+  itself to run the build, which is not what the plugin is compiled against.
+
+### Changed
+
+- `gradle-plugin-publish` 2.2.1 and `com.gradleup.nmcp` 1.6.2.
+- Toolchain and CI action refreshes (setup-java 6.0.1, deploy-pages 5.0.1,
+  codeql-action 4.38.0, Develocity 4.5.1).
+
+### Documentation
+
+- State that the configuration cache has been supported since 0.2.1.
+
+### Build
+
+- A release now describes itself once, from this file: the publish workflow
+  fails when a version has no section here, so a forgotten entry stops the
+  release instead of silently shipping the previous one's notes.
+
 ## [0.2.1]
 
 Released before this file was plugin-managed. See the
