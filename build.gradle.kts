@@ -13,6 +13,10 @@ changelog {
     // `-SNAPSHOT` under `-PsnapshotBuild`; the raw property is what a release uses.
     version = providers.gradleProperty("version")
     repositoryUrl = "https://github.com/meshtastic/gradle-flatpak-sources"
+    // An empty Unreleased fails the bump here, with the plugin's own message.
+    // The default skips the task green and leaves no heading, which the release
+    // gate would only catch one tag later.
+    patchEmpty = false
     // Breaking leads. A Gradle plugin's contract is its DSL, its task names and its
     // behaviour inside someone else's build, so "do I have to change my build
     // script" is the first question a consumer has.
