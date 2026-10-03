@@ -37,7 +37,8 @@ jobs:
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
 
       - name: Build & Test
-        run: ./gradlew :plugin:build :plugin:functionalTest --stacktrace
+        # `gradle`, not `./gradlew`: the wrapper would run its own version in every job.
+        run: gradle :plugin:build :plugin:functionalTest --stacktrace
 
       - name: Upload test reports
         if: failure()
