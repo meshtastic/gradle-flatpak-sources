@@ -20,9 +20,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # Floor, the consumers' pin, and current. The CC bugs in #45 reproduced only on 9.7.x —
-        # a single-version matrix is what let them ship.
-        gradle: ['9.5.1', '9.6.1', '9.7.1']
+        # Floor, 9.7.x (where #45's CC bugs reproduced), and current, which is android's pin.
+        # A single-version matrix is what let those bugs ship.
+        gradle: ['9.5.1', '9.7.1', '9.8.0']
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -37,7 +37,8 @@ jobs:
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
 
       - name: Build & Test
-        run: ./gradlew :plugin:build :plugin:functionalTest --stacktrace
+        # `gradle`, not `./gradlew`: the wrapper would run its own version in every job.
+        run: gradle :plugin:build :plugin:functionalTest --stacktrace
 
       - name: Upload test reports
         if: failure()
